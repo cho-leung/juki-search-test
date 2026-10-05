@@ -1,6 +1,6 @@
 {
   "system_version": "0.2",
-  "lead_endpoint": null,
+  "lead_endpoint": "https://script.google.com/macros/s/AKfycbybM7TeEMbAdSPI6XdRSeYk_YtdnA1OqTZvBwwP1mi1qc-nS49oXhBdmaU_2dBl-hEDjg/exec",
   "parts": [
     {
       "sku": "110-38650",
