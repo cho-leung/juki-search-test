@@ -4,10 +4,10 @@
   "parts": [
     {
       "sku": "110-38650",
-      "name": "Juki Rotary Hook Assembly",
-      "part_type": "Rotary Hook Assembly",
+      "name": "Juki Hook Assembly",
+      "part_type": "HOOK ASM.",
       "validation_role": "control",
-      "machine_models": null,
+      "machine_models": ["DDL-8000A"],
       "compatibility": null,
       "oem_availability": null,
       "compatible_availability": null,
@@ -15,15 +15,21 @@
       "price": null,
       "lead_time": null,
       "specifications": null,
-      "identity_source": "User-supplied SKU mapping; manufacturer documentation has not been verified in this repository.",
+      "identity_source": "JUKI official DDL-8000A parts documentation identifies 110-38650 as HOOK ASM. This is a documentation reference; exact-variant fit still requires verification.",
+      "manufacturer_documentation": {
+        "title": "JUKI official DDL-8000A parts documentation",
+        "url": "https://www.juki.co.jp/industrial_j/download_j/manual_j/ddl8000a/ddl8000a/menu/8000a/partslist.pdf",
+        "machine_reference": "DDL-8000A",
+        "part_description": "HOOK ASM."
+      },
       "references": []
     },
     {
       "sku": "400-90753",
       "name": "Juki Thread Trimmer Solenoid",
-      "part_type": "Thread Trimmer Solenoid",
+      "part_type": "THREAD TRIMMER SOLENOID",
       "validation_role": "active_test",
-      "machine_models": null,
+      "machine_models": ["DLN-5410N-7"],
       "compatibility": null,
       "oem_availability": null,
       "compatible_availability": null,
@@ -31,14 +37,29 @@
       "price": null,
       "lead_time": null,
       "specifications": null,
-      "identity_source": "User-supplied SKU mapping; manufacturer documentation has not been verified in this repository.",
+      "identity_source": "JUKI official DLN-5410N-7 parts documentation identifies 400-90753 as THREAD TRIMMER SOLENOID. This is a documentation reference; exact-variant fit still requires verification.",
+      "manufacturer_documentation": {
+        "title": "JUKI official DLN-5410N-7 parts documentation",
+        "url": "https://www.juki.co.jp/industrial_j/download_j/manual_j/dln5410n/menu/dln5410n/pdf/partslist_dln5410n-7.pdf",
+        "machine_reference": "DLN-5410N-7",
+        "part_description": "THREAD TRIMMER SOLENOID"
+      },
       "references": [
         {
           "part_number": "110-96500",
-          "role": "historical_or_alternate_reference_only",
+          "role": "separately_documented_reference_only",
+          "part_type": "THREAD TRIMMER SOLENOID",
+          "manufacturer_documentation": {
+            "title": "JUKI official DDL-8700-7 parts documentation",
+            "url": "https://www.juki.co.jp/industrial_j/download_j/manual_j/ddl8700/menu/ddl8700-7/pdf/partslist.pdf",
+            "machine_reference": "DDL-8700-7",
+            "part_description": "THREAD TRIMMER SOLENOID"
+          },
           "relationship": null,
           "supersession_verified": false,
-          "note": "Historical / alternate reference only. Its relationship to 400-90753 is unknown. Interchangeability and supersession have not been verified."
+          "replacement_verified": false,
+          "interchangeability_verified": false,
+          "note": "JUKI official DDL-8700-7 parts documentation separately identifies 110-96500 as THREAD TRIMMER SOLENOID. Its relationship to 400-90753 is unverified: no verified supersession, no verified replacement relationship, and no verified interchangeability."
         }
       ]
     },

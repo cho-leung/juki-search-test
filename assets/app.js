@@ -39,6 +39,19 @@
   function endpointIsConfigured(endpoint) {
     return typeof endpoint === "string" && /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(endpoint);
   }
+  function machineReference(part) {
+    return part.manufacturer_documentation && Array.isArray(part.machine_models) && part.machine_models.length
+      ? part.machine_models.join(", ") : null;
+  }
+  function documentationNote(part) {
+    const note = element("p", undefined, "tiny");
+    if (machineReference(part)) {
+      note.append(element("span", `${part.identity_source} `), link(part.manufacturer_documentation.url, part.manufacturer_documentation.title));
+    } else {
+      note.textContent = "Manufacturer documentation for this listing has not yet been verified.";
+    }
+    return note;
+  }
 
   function renderCatalog(data) {
     const intro = element("div", undefined, "card section-card");
@@ -60,10 +73,12 @@
       result.replaceChildren();
       const query = normalize(input.value);
       const part = data.parts.find((item) => normalize(item.sku) === query);
+      const referencedPart = data.parts.find((item) => item.references.some((reference) => normalize(reference.part_number) === query));
       if (part) {
         result.append(link(`juki/${part.sku}.html`, `${part.sku} — ${part.name}: view details and request a fit check`));
-      } else if (query === "11096500") {
-        result.append(element("span", "110-96500 is a historical / alternate reference only. Supersession and interchangeability are unverified. "), link("juki/400-90753.html", "View the reference note for 400-90753"));
+      } else if (referencedPart) {
+        const reference = referencedPart.references.find((item) => normalize(item.part_number) === query);
+        result.append(element("span", `${reference.note} This number is reference-only in this catalog. `), link(reference.manufacturer_documentation.url, reference.manufacturer_documentation.title), element("span", " "), link(`juki/${referencedPart.sku}.html`, `View the separate reference note on ${referencedPart.sku}`));
       } else {
         result.textContent = "No exact part-number match in this catalog. Machine-model compatibility is unknown; do not infer a fit from a similar number.";
       }
@@ -72,7 +87,9 @@
     const catalog = element("div", undefined, "catalog");
     data.parts.forEach((part) => {
       const card = element("article", undefined, "card");
-      card.append(element("h2", part.sku, "sku"), element("h3", part.name), element("p", "Machine fit: unknown. OEM / compatible options and availability: unknown.", "sub"), link(`juki/${part.sku}.html`, "View part & request fit check", "cta"));
+      const reference = machineReference(part);
+      const summary = reference ? `Manufacturer-documented reference: ${reference}. Exact fit unconfirmed. OEM / compatible options and availability: unknown.` : "Machine fit: unknown. OEM / compatible options and availability: unknown.";
+      card.append(element("h2", part.sku, "sku"), element("h3", part.name), element("p", summary, "sub"), link(`juki/${part.sku}.html`, "View part & request fit check", "cta"));
       catalog.append(card);
     });
     app.replaceChildren(intro, catalog);
@@ -152,17 +169,19 @@
     const heading = element("h1");
     heading.append(element("span", part.sku, "sku"), element("span", part.name));
     const facts = element("dl", undefined, "partbox");
-    facts.append(fact("Exact part number", `${part.sku} / ${part.sku.replace(/-/g, "")}`), fact("Part type", part.part_type), fact("Machine model / variant", "Unknown — provide your exact model"), fact("Compatibility", "Unknown — fit needs verification"));
+    const reference = machineReference(part);
+    facts.append(fact("Exact part number", `${part.sku} / ${part.sku.replace(/-/g, "")}`), fact("Part type", part.part_type), fact(reference ? "Manufacturer-documented reference" : "Machine model / variant", reference || "Unknown — provide your exact model"), fact("Compatibility", "Exact-variant fit unconfirmed"));
     product.append(heading, element("p", "Match the existing part number first, then check the full machine model and variant. A matching search result alone does not establish compatibility.", "sub"), facts);
     const compatibility = section("Machine model & compatibility", [detailList([
-      ["Confirmed machine models", "Unknown. No manufacturer fit documentation has been verified here."],
+      ["Manufacturer-documented reference", reference ? `${reference}. Parts-document reference only; confirm the exact machine variant and existing part. Do not infer fit for other models.` : "Unknown. No manufacturer fit documentation has been verified here."],
       ["Exact variant and part marking", "Required for review. Similar machine names or part numbers do not establish fit."],
+      ["Compatible-part fit", "Unknown unless separately verified."],
       ["Dimensions and specifications", "Unknown. Compare manufacturer documentation and the existing part before any purchase."]
     ])]);
     if (part.references.length) {
       const reference = element("div", undefined, "reference");
-      reference.append(element("h3", "Historical / alternate reference"));
-      part.references.forEach((item) => reference.append(element("p", `${item.part_number}: ${item.note}`)));
+      reference.append(element("h3", "Separate manufacturer-documented reference"));
+      part.references.forEach((item) => reference.append(element("p", item.note), link(item.manufacturer_documentation.url, item.manufacturer_documentation.title)));
       compatibility.append(reference);
     }
     const options = section("OEM vs compatible", [detailList([
@@ -181,7 +200,7 @@
     hero.append(details, renderForm(part, data.lead_endpoint));
     const steps = element("ol");
     ["Exact existing part number, including all digits and markings.", "Full machine model and variant.", "Compatibility review against the machine documentation and old part.", "OEM or compatible preference and provenance check.", "Current availability, price and lead time check."].forEach((text) => steps.append(element("li", text)));
-    app.replaceChildren(crumbs, hero, section("What a fit request needs", [steps, element("p", "Manufacturer documentation for this listing has not yet been verified.", "tiny")]));
+    app.replaceChildren(crumbs, hero, section("What a fit request needs", [steps, documentationNote(part)]));
   }
 
   async function start() {

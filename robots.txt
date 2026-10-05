@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://cho-leung.github.io/juki-search-test/sitemap.xml

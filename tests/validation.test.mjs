@@ -10,6 +10,20 @@ const backend = readFileSync(resolve(root, 'backend/Code.gs'), 'utf8');
 const siteBase = 'https://example.com/juki-search-test/';
 const headers = ['timestamp', 'sku', 'machine_model', 'part_number', 'email', 'preference', 'notes', 'page_url', 'lead_status', 'owner_minutes', 'quoted', 'paid', 'estimated_contribution', 'actual_contribution'];
 const skus = ['110-38650', '400-90753', '110-40359'];
+const liveBase = 'https://cho-leung.github.io/juki-search-test/';
+const leadEndpoint = 'https://script.google.com/macros/s/AKfycbybM7TeEMbAdSPI6XdRSeYk_YtdnA1OqTZvBwwP1mi1qc-nS49oXhBdmaU_2dBl-hEDjg/exec';
+const catalog = JSON.parse(readFileSync(resolve(root, 'data/parts.json'), 'utf8'));
+const manufacturerSources = {
+  '110-38650': 'https://www.juki.co.jp/industrial_j/download_j/manual_j/ddl8000a/ddl8000a/menu/8000a/partslist.pdf',
+  '400-90753': 'https://www.juki.co.jp/industrial_j/download_j/manual_j/dln5410n/menu/dln5410n/pdf/partslist_dln5410n-7.pdf',
+  '110-96500': 'https://www.juki.co.jp/industrial_j/download_j/manual_j/ddl8700/menu/ddl8700-7/pdf/partslist.pdf'
+};
+const indexablePages = new Map([
+  ['index.html', liveBase],
+  ['juki/400-90753.html', liveBase + 'juki/400-90753.html'],
+  ['juki/110-38650.html', liveBase + 'juki/110-38650.html']
+]);
+const noindexPages = ['juki/110-40359.html', 'privacy.html', 'thank-you.html'];
 
 function request(overrides = {}) {
   const fields = {
@@ -119,7 +133,7 @@ test('HTML in notes is stored as text, never reflected in public HTML or logs', 
 });
 
 const rejected = [
-  ['historical reference as SKU', { sku: '110-96500' }],
+  ['reference-only number as SKU', { sku: '110-96500' }],
   ['unlisted SKU', { sku: '123-45678' }],
   ['duplicate email', { email: ['first@example.com', 'second@example.com'] }],
   ['unknown field / redirect', { redirect_url: 'https://evil.example/' }],
@@ -209,26 +223,102 @@ test('GET never records a lead or sends mail', () => {
   assert.equal(h.mail.length, 0);
 });
 
-test('catalog has exactly the requested SKU roles and reference-only historical number', () => {
-  const data = JSON.parse(readFileSync(resolve(root, 'data/parts.json'), 'utf8'));
+test('catalog retains exactly three SKU roles and the exact existing lead endpoint', () => {
+  const data = catalog;
   assert.equal(data.system_version, '0.2');
-  assert.ok(data.lead_endpoint === null || /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(data.lead_endpoint));
+  assert.equal(data.lead_endpoint, leadEndpoint);
   assert.deepEqual(data.parts.map(part => [part.sku, part.validation_role]), [['110-38650', 'control'], ['400-90753', 'active_test'], ['110-40359', 'watch_candidate']]);
-  assert.equal(data.parts[1].references[0].part_number, '110-96500');
-  assert.equal(data.parts[1].references[0].relationship, null);
-  assert.equal(data.parts[1].references[0].supersession_verified, false);
   for (const part of data.parts) {
-    for (const key of ['machine_models', 'compatibility', 'stock', 'price', 'lead_time', 'oem_availability', 'compatible_availability', 'specifications']) assert.equal(part[key], null);
+    for (const key of ['compatibility', 'stock', 'price', 'lead_time', 'oem_availability', 'compatible_availability', 'specifications']) assert.equal(part[key], null);
   }
   assert.deepEqual(readdirSync(resolve(root, 'juki')).sort(), skus.map(sku => sku + '.html').sort());
 });
 
-test('every page retains noindex,nofollow and local assets/links resolve', () => {
-  const pages = ['index.html', 'privacy.html', 'thank-you.html', ...skus.map(sku => `juki/${sku}.html`)];
+for (const [sku, machine, description] of [
+  ['400-90753', 'DLN-5410N-7', 'THREAD TRIMMER SOLENOID'],
+  ['110-38650', 'DDL-8000A', 'HOOK ASM.']
+]) {
+  test(`${sku} has only the authorized manufacturer documentation reference`, () => {
+    const part = catalog.parts.find(item => item.sku === sku);
+    assert.deepEqual(part.machine_models, [machine]);
+    assert.equal(part.part_type, description);
+    assert.equal(part.manufacturer_documentation.machine_reference, machine);
+    assert.equal(part.manufacturer_documentation.part_description, description);
+    assert.equal(part.manufacturer_documentation.url, manufacturerSources[sku]);
+    assert.match(part.identity_source, /documentation reference; exact-variant fit still requires verification/);
+    assert.equal(part.compatibility, null);
+    if (sku === '110-38650') assert.equal(part.name, 'Juki Hook Assembly');
+  });
+}
+
+test('110-96500 is separately documented, reference-only, with all relationships unverified', () => {
+  const references = catalog.parts.flatMap(part => part.references);
+  assert.equal(references.length, 1);
+  const reference = references[0];
+  assert.equal(reference.part_number, '110-96500');
+  assert.equal(reference.role, 'separately_documented_reference_only');
+  assert.equal(reference.part_type, 'THREAD TRIMMER SOLENOID');
+  assert.equal(reference.manufacturer_documentation.machine_reference, 'DDL-8700-7');
+  assert.equal(reference.manufacturer_documentation.url, manufacturerSources['110-96500']);
+  assert.equal(reference.relationship, null);
+  assert.equal(reference.supersession_verified, false);
+  assert.equal(reference.replacement_verified, false);
+  assert.equal(reference.interchangeability_verified, false);
+  for (const phrase of ['separately identifies 110-96500', 'no verified supersession', 'no verified replacement relationship', 'no verified interchangeability']) assert.ok(reference.note.includes(phrase));
+  assert.doesNotMatch(reference.note, /historical|superseded/i);
+  assert.ok(!catalog.parts.some(part => part.sku === '110-96500'));
+  assert.ok(!existsSync(resolve(root, 'juki/110-96500.html')));
+});
+
+test('110-40359 remains unverified with no added manufacturer evidence', () => {
+  const watch = catalog.parts.find(part => part.sku === '110-40359');
+  assert.equal(watch.machine_models, null);
+  assert.equal(watch.compatibility, null);
+  assert.equal(watch.manufacturer_documentation, undefined);
+  assert.deepEqual(watch.references, []);
+  assert.match(watch.identity_source, /manufacturer documentation has not been verified/);
+});
+
+for (const [page, canonical] of indexablePages) {
+  test(`${page} is indexable with its exact self-referencing canonical`, () => {
+    const html = readFileSync(resolve(root, page), 'utf8');
+    const robots = [...html.matchAll(/<meta\b[^>]*name="robots"[^>]*>/gi)];
+    assert.ok(robots.every(([tag]) => !/noindex|nofollow/i.test(tag)));
+    const canonicals = [...html.matchAll(/<link\b[^>]*rel="canonical"[^>]*>/gi)];
+    assert.equal(canonicals.length, 1);
+    assert.ok(canonicals[0][0].includes(`href="${canonical}"`));
+  });
+}
+
+for (const page of noindexPages) {
+  test(`${page} keeps noindex,nofollow and has no canonical`, () => {
+    const html = readFileSync(resolve(root, page), 'utf8');
+    assert.match(html, /<meta name="robots" content="noindex,nofollow">/);
+    assert.doesNotMatch(html, /rel="canonical"/i);
+  });
+}
+
+test('the sitemap contains exactly the three authorized URLs', () => {
+  const sitemap = readFileSync(resolve(root, 'sitemap.xml'), 'utf8');
+  assert.match(sitemap, /<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9">/);
+  const urls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(([, url]) => url);
+  assert.equal((sitemap.match(/<url>/g) || []).length, 3);
+  assert.deepEqual(urls, [...indexablePages.values()]);
+  assert.doesNotMatch(sitemap, /110-40359|privacy\.html|thank-you\.html|110-96500/);
+});
+
+test('robots.txt allows crawling and points to the authorized sitemap', () => {
+  const robots = readFileSync(resolve(root, 'robots.txt'), 'utf8');
+  assert.equal(robots, `User-agent: *\nAllow: /\n\nSitemap: ${liveBase}sitemap.xml\n`);
+  assert.doesNotMatch(robots, /Disallow:/i);
+});
+
+test('all six pages have valid local assets and links, with no extra HTML pages', () => {
+  const pages = [...indexablePages.keys(), ...noindexPages];
+  assert.deepEqual(readdirSync(root).filter(name => name.endsWith('.html')).sort(), ['index.html', 'privacy.html', 'thank-you.html']);
   for (const page of pages) {
     const path = resolve(root, page);
     const html = readFileSync(path, 'utf8');
-    assert.match(html, /<meta name="robots" content="noindex,nofollow">/);
     assert.match(html, /<html lang="en">/);
     for (const [, target] of html.matchAll(/(?:href|src)="([^"]+)"/g)) {
       if (!/^(?:https?:|#)/.test(target)) assert.ok(existsSync(resolve(dirname(path), target)), `${page}: ${target}`);
