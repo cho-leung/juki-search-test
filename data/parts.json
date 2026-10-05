@@ -1,0 +1,62 @@
+{
+  "system_version": "0.2",
+  "lead_endpoint": null,
+  "parts": [
+    {
+      "sku": "110-38650",
+      "name": "Juki Rotary Hook Assembly",
+      "part_type": "Rotary Hook Assembly",
+      "validation_role": "control",
+      "machine_models": null,
+      "compatibility": null,
+      "oem_availability": null,
+      "compatible_availability": null,
+      "stock": null,
+      "price": null,
+      "lead_time": null,
+      "specifications": null,
+      "identity_source": "User-supplied SKU mapping; manufacturer documentation has not been verified in this repository.",
+      "references": []
+    },
+    {
+      "sku": "400-90753",
+      "name": "Juki Thread Trimmer Solenoid",
+      "part_type": "Thread Trimmer Solenoid",
+      "validation_role": "active_test",
+      "machine_models": null,
+      "compatibility": null,
+      "oem_availability": null,
+      "compatible_availability": null,
+      "stock": null,
+      "price": null,
+      "lead_time": null,
+      "specifications": null,
+      "identity_source": "User-supplied SKU mapping; manufacturer documentation has not been verified in this repository.",
+      "references": [
+        {
+          "part_number": "110-96500",
+          "role": "historical_or_alternate_reference_only",
+          "relationship": null,
+          "supersession_verified": false,
+          "note": "Historical / alternate reference only. Its relationship to 400-90753 is unknown. Interchangeability and supersession have not been verified."
+        }
+      ]
+    },
+    {
+      "sku": "110-40359",
+      "name": "Juki Knife Unit",
+      "part_type": "Knife Unit",
+      "validation_role": "watch_candidate",
+      "machine_models": null,
+      "compatibility": null,
+      "oem_availability": null,
+      "compatible_availability": null,
+      "stock": null,
+      "price": null,
+      "lead_time": null,
+      "specifications": null,
+      "identity_source": "User-supplied SKU mapping; manufacturer documentation has not been verified in this repository.",
+      "references": []
+    }
+  ]
+}
